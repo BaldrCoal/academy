@@ -7,7 +7,7 @@ class ImportsHandler(BaseHandler):
 
     async def post(self):
         data = json.loads(self.request.body.decode())
-        success = db.imports(data)
+        success = await db.imports(data)
         if success:
             self.set_status(200)
         else:

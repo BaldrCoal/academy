@@ -2,8 +2,10 @@ import aiosqlite
 import asyncio
 from datetime import datetime
 
+
 class DataBase:
     _db_name: str = "test.db"
+    _table_name: str = "Test"
     __instance = None
     con = None
     cur = None
@@ -14,10 +16,10 @@ class DataBase:
         return cls.__instance
 
     async def db_init(self):
-        self.con = await aiosqlite.connect(self._db_name)
-        self.cur = await self.con.cursor()
-        await self.cur.execute("""
-                                CREATE TABLE IF NOT EXISTS Test
+        self.con: aiosqlite.Connection = await aiosqlite.connect(self._db_name)
+        self.cur: aiosqlite.Cursor = await self.con.cursor()
+        await self.cur.execute(f"""
+                                CREATE TABLE IF NOT EXISTS {self._table_name}
                                 (
                                     type TEXT, 
                                     id TEXT,
@@ -31,8 +33,21 @@ class DataBase:
     async def imports(self, data: dict) -> bool:
         if not self.datetime_valid(data['updateDate']):
             return False
-        items = data['items']
-        #TODO insert items into db
+        items = [
+            (
+                item.get('type', None),
+                item['id'],
+                item.get('parentId', None),
+                item.get('url', None),
+                item.get('size', None),
+                item.get('updateDate', None),
+            ) for item in data['items']
+        ]
+        print(items)
+        await self.cur.executemany(
+            f"INSERT INTO {self._table_name}(type, id, parentId, url, size, updateDate) VALUES(?, ?, ?, ?, ?, ?)",
+            items)
+        await self.con.commit()
         return True
 
     async def deletes(self, id):
@@ -48,16 +63,12 @@ class DataBase:
         pass
 
     @staticmethod
-    def datetime_valid(dt_str) -> bool:
+    def datetime_valid(dt_str) -> int:
         try:
-            datetime.fromisoformat(dt_str.replace('Z', '+00:00'))
-        except:
-            return False
-        return True
+            ts = datetime.fromisoformat(dt_str.replace('Z', '+00:00')).timestamp()
+            return int(ts)
+        except ValueError:
+            return -1
 
 
 db: DataBase = DataBase()
-
-s = "2022-05-28T21:12:01.000Z"
-
-print(db.datetime_valid(s))
