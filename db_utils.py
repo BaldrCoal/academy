@@ -26,7 +26,8 @@ class DataBase:
                                     parentId TEXT,
                                     url TEXT,
                                     size INTEGER,
-                                    updateDate TEXT
+                                    updateDate TEXT,
+                                    PRIMARY KEY (id)
                                 )
                                 """)
 
@@ -46,7 +47,7 @@ class DataBase:
         ]
         print(items)
         await self.cur.executemany(
-            f"INSERT INTO {self._table_name}(type, id, parentId, url, size, updateDate) VALUES(?, ?, ?, ?, ?, ?)",
+            f"INSERT OR REPLACE INTO {self._table_name}(type, id, parentId, url, size, updateDate) VALUES(?, ?, ?, ?, ?, ?)",
             items)
         await self.con.commit()
         return True
