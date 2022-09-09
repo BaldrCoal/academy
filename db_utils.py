@@ -31,7 +31,8 @@ class DataBase:
                                 """)
 
     async def imports(self, data: dict) -> bool:
-        if not self.datetime_valid(data['updateDate']):
+        ts = self.datetime_valid(data['updateDate'])
+        if ts < 0:
             return False
         items = [
             (
@@ -40,7 +41,7 @@ class DataBase:
                 item.get('parentId', None),
                 item.get('url', None),
                 item.get('size', None),
-                item.get('updateDate', None),
+                ts,
             ) for item in data['items']
         ]
         print(items)
