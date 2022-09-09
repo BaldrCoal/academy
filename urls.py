@@ -4,14 +4,14 @@ from handlers.imports_handler import ImportsHandler
 from handlers.delete_handler import DeletesHandler
 from handlers.nodes_handler import NodesHandler
 from handlers.updates_handler import UpdatesHandler
-from handlers.nodes_history_handler import NodesHistoryHandler
+from handlers.nodes_history_handler import NodeHistoryHandler
 
 urls = [
     (r'/', IndexHandler,),
     (r'/imports', ImportsHandler,),
     (r'/delete/(.*)', DeletesHandler),
     (r'/nodes/(.*)', NodesHandler),
-    (r'/nodes/(.*)/history', NodesHistoryHandler),
+    (r'/node/(.*)/history', NodeHistoryHandler),
     (r'/updates', UpdatesHandler),
 
 
