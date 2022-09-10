@@ -5,12 +5,21 @@ from db_utils import db
 
 class ImportsHandler(BaseHandler):
 
-    async def post(self):
-        data = json.loads(self.request.body.decode())
-        success = await db.imports(data)
-        if success:
-            self.set_status(200)
+    async def post(self) -> None:
+        answer: dict = dict()
+        try:
+            data: dict = json.loads(self.request.body.decode())
+        except json.decoder.JSONDecodeError:
+            answer["code"] = 400
+            answer["message"] = "Invalid document scheme"
         else:
-            # self.set_header("Content-Type", "application/json") ?
-            self.set_status(400)
-            self.write('{"code": 400,"message": "Validation Failed"}')
+            success: bool = await db.imports(data)
+            if success is True:
+                answer["code"] = 200
+                answer["message"] = "ok"
+            else:
+                answer["code"] = 400
+                answer["message"] = "Validation fail"
+        finally:
+            self.set_status(answer["code"])
+            self.write(json.dumps(answer))
