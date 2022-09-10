@@ -45,18 +45,27 @@ class DataBase:
                 ts,
             ) for item in data['items']
         ]
-        print(items)
         await self.cur.executemany(
-            f"INSERT OR REPLACE INTO {self._table_name}(type, id, parentId, url, size, updateDate) VALUES(?, ?, ?, ?, ?, ?)",
+            f"""INSERT OR REPLACE INTO {self._table_name}(
+                    type,
+                    id,
+                    parentId,
+                    url,
+                    size,
+                    updateDate
+                ) VALUES(?, ?, ?, ?, ?, ?)""",
             items)
         await self.con.commit()
         return True
 
-    async def deletes(self, id):
-        pass
+    async def delete(self, id, date) -> bool:
+        await self.cur.execute(f"""DELETE FROM {self._table_name} where id == {id}""")
+        return bool(self.cur.rowcount)
 
-    async def get_node(self, id):
-        pass
+    async def get_node(self, id) -> dict:
+        ans = dict()
+        s = [id]
+        return {}
 
     async def update(self):
         pass
