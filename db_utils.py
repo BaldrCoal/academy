@@ -76,7 +76,22 @@ class DataBase:
         return True
 
     async def delete(self, id, date) -> bool:
-        pass
+        await self.cur.execute(
+            f"""
+            WITH RECURSIVE
+              to_delete(do) AS (
+                VALUES(?)
+                UNION ALL
+                SELECT {self._table_name}.id
+                  FROM {self._table_name} JOIN to_delete ON {self._table_name}.parentId=to_delete.do
+              )
+            DELETE FROM {self._table_name} WHERE id in (SELECT do FROM to_delete);
+            """,
+            (id,)
+        )
+        count = self.cur.rowcount
+        await self.con.commit()
+        return bool(count)
 
     async def get_node(self, id) -> dict:
         import sqlite3
@@ -87,7 +102,8 @@ class DataBase:
                 # get info about node
                 node = await self.cur.execute(f"SELECT * FROM {self._table_name} WHERE id = ?", (id,))
                 result = await node.fetchone()
-
+                if result is None:
+                    return
             elif isinstance(id, (sqlite3.Row, tuple)):
                 result, id = id, id[1]
             else:
