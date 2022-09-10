@@ -93,6 +93,7 @@ EXPECTED_TREE = {
     "parentId": None,
     "date": "2022-02-03T15:00:00Z",
     "children": [
+
         {
             "type": "FOLDER",
             "id": "1cc0129a-2bfe-474c-9ee6-d435bf5fc8f2",
