@@ -7,6 +7,7 @@ import typing as tp
 class DataBase:
     _db_name: str = "test.db"
     _table_name: str = "Test"
+    _updates_name: str = "History"
     __instance = None
     con = None
     cur = None
@@ -32,6 +33,21 @@ class DataBase:
                                     PRIMARY KEY (id)
                                 )
                                 """)
+        await self.con.commit()
+        await self.cur.execute(f"""
+                                CREATE TABLE IF NOT EXISTS {self._updates_name}
+                                (
+                                    type TEXT, 
+                                    id TEXT,
+                                    parentId TEXT,
+                                    url TEXT,
+                                    size INTEGER,
+                                    updateDate TEXT,
+                                    ts INTEGER,
+                                    PRIMARY KEY (id, ts)
+                                )
+                                """)
+        await self.con.commit()
 
     async def imports(self, data: dict) -> bool:
         ts = self.datetime_valid(data['updateDate'])
@@ -61,6 +77,17 @@ class DataBase:
             ) VALUES(?, ?, ?, ?, ?, ?, ?)""", items)
         await self.cur.executemany(
             f"""
+            INSERT OR REPLACE INTO {self._updates_name}(
+                type,
+                id,
+                parentId,
+                url,
+                size,
+                updateDate,
+                ts
+            ) VALUES(?, ?, ?, ?, ?, ?, ?)""", items)
+        await self.cur.executemany(
+            f"""
             WITH RECURSIVE
                 update_time(up) AS (
                     VALUES (?)
@@ -76,6 +103,19 @@ class DataBase:
         return True
 
     async def delete(self, id, date) -> bool:
+        await self.cur.execute(
+            f"""
+            WITH RECURSIVE
+              to_delete(do) AS (
+                VALUES(?)
+                UNION ALL
+                SELECT {self._table_name}.id
+                  FROM {self._table_name} JOIN to_delete ON {self._table_name}.parentId=to_delete.do
+              )
+            DELETE FROM {self._updates_name} WHERE id in (SELECT do FROM to_delete);
+            """,
+            (id,)
+        )
         await self.cur.execute(
             f"""
             WITH RECURSIVE
@@ -131,10 +171,30 @@ class DataBase:
 
         return await inner(id)
 
-    async def updates(self):
-        pass
+    async def updates(self, date) -> tp.Optional[dict]:
+        ts = self.datetime_valid(date)
+        if ts < 0:
+            return
+        ts = ts - 24 * 60 * 60
 
-    async def get_node_history(self, id):
+        r = await self.cur.execute(
+            f"""
+            SELECT id, url, updateDate, parentId, size, type from {self._updates_name}
+            WHERE ts>=?""", (ts,))
+        updates = await r.fetchall()
+        ans = {"items": []}
+        for up in updates:
+            ans['items'].append({
+                "id": up[0],
+                "url": up[1],
+                "date": up[2],
+                "parentId": up[3],
+                "size": up[4],
+                "type": up[5]
+            })
+        return ans
+
+    async def get_node_history(self, id, from_date, to_date):
         pass
 
     @staticmethod

@@ -10,10 +10,10 @@ class BaseHandler(RequestHandler):
     def post(self):
         self.write('some post')
 
-    def get(self):
+    def get(self, *args):
         self.write('some get')
 
-    def delete(self):
+    def delete(self, *args):
         self.write('some delete')
 
     # def options(self, args):
