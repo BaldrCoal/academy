@@ -1,6 +1,7 @@
 import aiosqlite
 import asyncio
 from datetime import datetime
+import typing as tp
 
 
 class DataBase:
@@ -26,7 +27,8 @@ class DataBase:
                                     parentId TEXT,
                                     url TEXT,
                                     size INTEGER,
-                                    updateDate INTEGER,
+                                    updateDate TEXT,
+                                    ts INTEGER,
                                     PRIMARY KEY (id)
                                 )
                                 """)
@@ -42,6 +44,7 @@ class DataBase:
                 item.get('parentId', None),
                 item.get('url', None),
                 item.get('size', None),
+                data['updateDate'],
                 ts,
             ) for item in data['items']
         ]
@@ -52,8 +55,9 @@ class DataBase:
                     parentId,
                     url,
                     size,
-                    updateDate
-                ) VALUES(?, ?, ?, ?, ?, ?)""",
+                    updateDate,
+                    ts
+                ) VALUES(?, ?, ?, ?, ?, ?, ?)""",
             items)
         await self.con.commit()
         return True
@@ -65,12 +69,20 @@ class DataBase:
         return count
 
     async def get_node(self, id) -> dict:
-        async def inner(id) -> tuple[dict, int]:
-            info = dict()
+        import sqlite3
 
-            # get info about node
-            node = await self.cur.execute(f"SELECT * FROM {self._table_name} WHERE id = ?", (id,))
-            result = await node.fetchone()
+        async def inner(id: tp.Union[str, sqlite3.Row, tuple]) -> dict:
+            info = dict()
+            if isinstance(id, str):
+                # get info about node
+                node = await self.cur.execute(f"SELECT * FROM {self._table_name} WHERE id = ?", (id,))
+                result = await node.fetchone()
+
+            elif isinstance(id, (sqlite3.Row, tuple)):
+                result, id = id, id[1]
+            else:
+                raise ValueError(f"Unsuported type {type(id)} supported ( str | sqlite3.row )")
+
             info['type'] = result[0]
             info['id'] = result[1]
             info['parentId'] = result[2]
@@ -81,16 +93,16 @@ class DataBase:
             else:
                 info['children'] = []
                 info['size'] = 0
-            # get info about childs
-            childs = await self.cur.execute(f"SELECT * FROM {self._table_name} WHERE parentId = ?", (id,))
-            childs_info = await childs.fetchall()
-            print(info)
-            print(childs_info)
-            return {0: 0}, 0
-            # add sum to info
+                childs = await self.cur.execute(f"SELECT * FROM {self._table_name} WHERE parentId = ?", (id,))
+                childs_info = await childs.fetchall()
+                for c in childs_info:
+                    info_c = await inner(c)
+                    info['size'] += info_c['size']
+                    info['children'].append(info_c)
 
-        node, _ = await inner(id)
-        return node
+            info['date'] = result[5]
+            return info
+        return await inner(id)
 
     async def update(self):
         pass
