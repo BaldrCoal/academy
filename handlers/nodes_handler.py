@@ -6,7 +6,5 @@ from db_utils import db
 class NodesHandler(BaseHandler):
     async def get(self, id):
         answer = await db.get_node(id)
-        answer["code"] = 200
-        answer["message"] = "ok"
-        self.set_status(answer["code"])
+        self.set_status(200)
         self.write(json.dumps(answer))

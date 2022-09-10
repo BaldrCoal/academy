@@ -49,24 +49,34 @@ class DataBase:
             ) for item in data['items']
         ]
         await self.cur.executemany(
-            f"""INSERT OR REPLACE INTO {self._table_name}(
-                    type,
-                    id,
-                    parentId,
-                    url,
-                    size,
-                    updateDate,
-                    ts
-                ) VALUES(?, ?, ?, ?, ?, ?, ?)""",
-            items)
+            f"""
+            INSERT OR REPLACE INTO {self._table_name}(
+                type,
+                id,
+                parentId,
+                url,
+                size,
+                updateDate,
+                ts
+            ) VALUES(?, ?, ?, ?, ?, ?, ?)""", items)
+        await self.cur.executemany(
+            f"""
+            WITH RECURSIVE
+                update_time(up) AS (
+                    VALUES (?)
+                    UNION ALL
+                    SELECT {self._table_name}.parentId
+                        FROM {self._table_name} JOIN update_time ON  {self._table_name}.id = update_time.up       
+                )
+                UPDATE {self._table_name} set updateDate = ?, ts = ? where id in (select up from update_time) 
+            """,
+            [(item[1], data['updateDate'], ts) for item in items]
+        )
         await self.con.commit()
         return True
 
     async def delete(self, id, date) -> bool:
-        await self.cur.execute(f"""DELETE FROM {self._table_name} WHERE id = ?""", (id,))
-        count = bool(self.cur.rowcount)
-        await self.con.commit()
-        return count
+        pass
 
     async def get_node(self, id) -> dict:
         import sqlite3
@@ -102,9 +112,10 @@ class DataBase:
 
             info['date'] = result[5]
             return info
+
         return await inner(id)
 
-    async def update(self):
+    async def updates(self):
         pass
 
     async def get_node_history(self, id):
