@@ -59,13 +59,21 @@ class DataBase:
         return True
 
     async def delete(self, id, date) -> bool:
-        await self.cur.execute(f"""DELETE FROM {self._table_name} where id == {id}""")
-        return bool(self.cur.rowcount)
+        await self.cur.execute(f"""DELETE FROM {self._table_name}WHERE id = \'{id}\'""")
+        count = bool(self.cur.rowcount)
+        await self.con.commit()
+        return count
 
     async def get_node(self, id) -> dict:
-        ans = dict()
-        s = [id]
-        return {}
+        def inner(id) -> dict:
+            info = dict()
+            await self.cur.execute(f"SELECT * FROM {self._table_name} WHERE id = \'{id}\'")
+            # get info about node
+            # get info about childs
+            # add sum to info
+            # return
+
+        return inner(id)
 
     async def update(self):
         pass
