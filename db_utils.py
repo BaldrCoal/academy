@@ -26,7 +26,7 @@ class DataBase:
                                     parentId TEXT,
                                     url TEXT,
                                     size INTEGER,
-                                    updateDate TEXT,
+                                    updateDate INTEGER,
                                     PRIMARY KEY (id)
                                 )
                                 """)
@@ -59,21 +59,38 @@ class DataBase:
         return True
 
     async def delete(self, id, date) -> bool:
-        await self.cur.execute(f"""DELETE FROM {self._table_name}WHERE id = \'{id}\'""")
+        await self.cur.execute(f"""DELETE FROM {self._table_name} WHERE id = ?""", (id,))
         count = bool(self.cur.rowcount)
         await self.con.commit()
         return count
 
     async def get_node(self, id) -> dict:
-        def inner(id) -> dict:
+        async def inner(id) -> tuple[dict, int]:
             info = dict()
-            await self.cur.execute(f"SELECT * FROM {self._table_name} WHERE id = \'{id}\'")
-            # get info about node
-            # get info about childs
-            # add sum to info
-            # return
 
-        return inner(id)
+            # get info about node
+            node = await self.cur.execute(f"SELECT * FROM {self._table_name} WHERE id = ?", (id,))
+            result = await node.fetchone()
+            info['type'] = result[0]
+            info['id'] = result[1]
+            info['parentId'] = result[2]
+            info['url'] = result[3]
+            if info['type'] == 'FILE':
+                info['children'] = None
+                info['size'] = result[4]
+            else:
+                info['children'] = []
+                info['size'] = 0
+            # get info about childs
+            childs = await self.cur.execute(f"SELECT * FROM {self._table_name} WHERE parentId = ?", (id,))
+            childs_info = await childs.fetchall()
+            print(info)
+            print(childs_info)
+            return {0: 0}, 0
+            # add sum to info
+
+        node, _ = await inner(id)
+        return node
 
     async def update(self):
         pass
